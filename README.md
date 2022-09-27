@@ -1,4 +1,4 @@
-## Scheme practice
+## Scheme/Racket practice
 
 <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Lambda_lc.svg/800px-Lambda_lc.svg.png" width="200">
 
