@@ -8,7 +8,7 @@
 (define (tree-right tree) (vector-ref tree 2))
 (define (empty-tree? t) (equal? t #()))
 
-; WITHOUT CC
+; IMPLEMENTATION WITHOUT CC
 
 (define (max-tree-level-without-cc tree) (
     if (empty-tree? tree) 0 (
@@ -51,7 +51,7 @@
     )
 ))
 
-; WITH CC (continuation-passing style)
+; IMPLEMENTATION WITH CC (continuation-passing style)
 
 (define (max-tree-level-cps tree cc) (
     if (empty-tree? tree) (cc 0) (
@@ -75,35 +75,34 @@
 ))
 
 
-
 (define (print-level-x-cps tree x) (
-    ; TO BE DONE
-    let loop ((t tree) (level 0)) (
-        if (or (empty-tree? t) (> level x)) '() (
+    let loop ((t tree) (level 0) (cc (lambda () (void)))) (
+        if (or (empty-tree? t) (> level x)) (cc) (
             if (= level x)
                 (begin 
                     (print (tree-data t))
                     (write-char #\space)
+                    (cc)
                 )
-                (
-                    begin 
-                       (loop (tree-right t) (+ level 1)) 
-                       (loop (tree-left t) (+ level 1)) 
-                    
-                )
+                (loop (tree-right t) (+ level 1) (
+                    lambda () (
+                        loop (tree-left t) (+ level 1) cc
+                    )
+                ))
         )
     )
 ))
 
-(define (print-tree-by-level-asc-cps tree) (
-    ; TO BE DONE
-    let ((max-level (max-tree-level-without-cc tree))) (
+
+(define (print-tree-by-level-asc tree) (
+    ; no need to use cps here: the recursion is already "iterable"
+    let ((max-level (max-tree-level-cps tree (lambda (x) x)))) (
         let loop ((tree tree)(x 0)) (
             if (> x max-level) (void) (
                 begin 
                 ; (print "printing lvl ")
                 ; (println x)
-                (print-level-x-without-cc tree x)
+                (print-level-x-cps tree x)
                 (newline)
                 (loop tree (+ x 1))
             )
@@ -116,5 +115,3 @@
 ; (print-tree-by-level-asc #(1 #() #()))
 ; (print-tree-by-level-asc #(10 #(21 #() #()) #(22 #() #())))
 ; (print-tree-by-level-asc #(10 #(21 #(31 #() #()) #()) #(22 #(33 #() #()) #(34 #() #()))))
-; (print-tree-by-level-asc #(10 #(21 #(31 #() #()) #()) #(22 #(33 #() #()) #(34 #() #()))))
-(max-tree-level-cps #(10 #(21 #(31 #() #()) #()) #(22 #(33 #() #()) #(34 #() #()))) (lambda (x) x))
