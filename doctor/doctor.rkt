@@ -7,11 +7,11 @@
 ; основная функция, запускающая "Доктора"
 ; параметр name -- имя пациента
 ; (неиспользуемая версия)
-; (define (visit-doctor name)
-;   (printf "Hello, ~a!\n" name)
-;   (print '(what seems to be the trouble?))
-;   (doctor-driver-loop-v2 name)
-; )
+(define (visit-doctor name)
+  (printf "Hello, ~a!\n" name)
+  (print '(what seems to be the trouble?))
+  (doctor-driver-loop-v2 name)
+)
 
 
 ; основная функция, запускающая "Доктора"
@@ -49,20 +49,21 @@
 
 ; цикл диалога Доктора с пациентом
 ; параметр name -- имя пациента
-; (define (doctor-driver-loop name)
-;     (newline)
-;     (print '**) ; доктор ждёт ввода реплики пациента, приглашением к которому является **
-;     (let ((user-response (read)))
-;       (cond 
-; 	    ((equal? user-response '(goodbye)) ; реплика '(goodbye) служит для выхода из цикла
-;              (printf "Goodbye, ~a!\n" name)
-;              (print '(see you next week)))
-;             (else (print (reply user-response)) ; иначе Доктор генерирует ответ, печатает его и продолжает цикл
-;                   (doctor-driver-loop name)
-;              )
-;        )
-;       )
-; )
+; (неиспользуемая версия)
+(define (doctor-driver-loop name)
+    (newline)
+    (print '**) ; доктор ждёт ввода реплики пациента, приглашением к которому является **
+    (let ((user-response (read)))
+      (cond 
+	    ((equal? user-response '(goodbye)) ; реплика '(goodbye) служит для выхода из цикла
+             (printf "Goodbye, ~a!\n" name)
+             (print '(see you next week)))
+            (else (print (reply user-response)) ; иначе Доктор генерирует ответ, печатает его и продолжает цикл
+                  (doctor-driver-loop name)
+             )
+       )
+      )
+)
 
 
 ; цикл диалога Доктора с пациентом
@@ -91,8 +92,7 @@
 (define (reply user-response history-vctr)
       (case (random 
               (if (can-use-keyword-answer user-response) -1 0)
-              0 ; TODO: REMOVE, ONLY FOR DEBUG PURPOSE
-              ; (if (equal? history-vctr #()) 2 3)
+              (if (equal? history-vctr #()) 2 3)
             )
           ; с равной вероятностью выбирается один из четыерёх способов построения ответа.
           ; однако, если массив ответов пользователя пуст, выбрать последний вариант нельзя,
@@ -187,26 +187,33 @@
       chosen-keyword
       (pick-random-list (leave-keywords-only user-response))
     )
-    ; (chosen-template) (
-      
-    ; )
+    (chosen-template (
+      pick-random-vector (get-templates-by-keyword chosen-keyword)
+    ))
   ) (
-    get-templates-by-keyword chosen-keyword
+    many-replace-v3
+      (list (list '* chosen-keyword))
+      chosen-template
   )
 ))
 
-
+; фильтрация входной строки, которая оставляет только слова, являющиеся ключевыми
 (define (leave-keywords-only user-response) (
   filter (lambda (word) (has-vector-elem? keywords-lst word)) user-response
 ))
 
 
+; получения единого вектора всех применимых фраз-шаблонов для данного ключевого слова
 (define (get-templates-by-keyword keyword) (
-  vector-append
+  vector-foldl
+  (lambda (idx result x) (
+    vector-append result x
+  ))
+  #()
   (
     vector-map
-      (lambda (v) (vector-ref v 0))
-      (vector-filter 
+      (lambda (v) (vector-ref v 1))
+      (vector-filter
         (lambda (t) (
           has-vector-elem? (vector-ref t 0) keyword
         ))
@@ -242,37 +249,39 @@
 
 ; осуществление всех замен в списке lst по ассоциативному списку replacement-pairs
 ; (порождаемый процесс рекурсивен)
-; (define (many-replace replacement-pairs lst)
-;         (cond ((null? lst) lst)
-;               (else (let ((pat-rep (assoc (car lst) replacement-pairs))) ; Доктор ищет первый элемент списка в ассоциативном списке замен
-;                       (cons (if pat-rep (cadr pat-rep) ;  если поиск был удачен, то в начало ответа Доктор пишет замену
-;                                 (car lst) ; иначе в начале ответа помещается начало списка без изменений
-;                             )
-;                             (many-replace replacement-pairs (cdr lst)) ; рекурсивно производятся замены в хвосте списка
-;                         )
-;                      )
-;                )
-;          )
-; )
+; (неиспользуемая версия)
+(define (many-replace replacement-pairs lst)
+        (cond ((null? lst) lst)
+              (else (let ((pat-rep (assoc (car lst) replacement-pairs))) ; Доктор ищет первый элемент списка в ассоциативном списке замен
+                      (cons (if pat-rep (cadr pat-rep) ;  если поиск был удачен, то в начало ответа Доктор пишет замену
+                                (car lst) ; иначе в начале ответа помещается начало списка без изменений
+                            )
+                            (many-replace replacement-pairs (cdr lst)) ; рекурсивно производятся замены в хвосте списка
+                        )
+                     )
+               )
+         )
+)
 
 
 ; осуществление всех замен в списке lst по ассоциативному списку replacement-pairs
 ; (порождаемый процесс итеративен)
-; (define (many-replace-v2 replacement-pairs lst) (
-;   let loop ((lst lst) (result '())) (
-;     if (null? lst) (reverse result) ( ; поскольку полученный результат для эффективности строился
-;                                       ; задом наперёд, его нужно перевернуть
-;       let ((pat-rep (assoc (car lst) replacement-pairs))) ( ; Доктор ищет первый элемент списка в ассоциативном списке замен
-;         loop (cdr lst) (
-;           cons (
-;                   if pat-rep (cadr pat-rep) ;  если поиск был удачен, то в начало result Доктор пишет замену
-;                   (car lst) ; иначе в начало result помещается начало списка без изменений
-;                ) result
-;         )
-;       )
-;     )
-;   )
-; ))
+; (неиспользуемая версия)
+(define (many-replace-v2 replacement-pairs lst) (
+  let loop ((lst lst) (result '())) (
+    if (null? lst) (reverse result) ( ; поскольку полученный результат для эффективности строился
+                                      ; задом наперёд, его нужно перевернуть
+      let ((pat-rep (assoc (car lst) replacement-pairs))) ( ; Доктор ищет первый элемент списка в ассоциативном списке замен
+        loop (cdr lst) (
+          cons (
+                  if pat-rep (cadr pat-rep) ;  если поиск был удачен, то в начало result Доктор пишет замену
+                  (car lst) ; иначе в начало result помещается начало списка без изменений
+               ) result
+        )
+      )
+    )
+  )
+))
 
 ; осуществление всех замен в списке lst по ассоциативному списку replacement-pairs
 (define (many-replace-v3 replacement-pairs lst) (
@@ -304,6 +313,7 @@
     (loop (sub1 i) (f i result (vector-ref vctr i)))))))
 
 
+; структура с шаблонами
 (define keywords-structure '#(
   #( ; начало данных 1й группы
     #(depressed suicide exams university) ; список ключевых слов 1й группы
@@ -311,20 +321,20 @@
 	    (when you feel depressed, go out for ice cream)
       (depression is a disease that can be treated)
       (try to do things that make you happy)
-      (eat some chocolate)
+      (chocolate is known to be useful when you feel sad)
 	)
   ) ; завершение данных 1й группы
   #( ; начало данных 2й группы ...
     #(mother father parents brother sister uncle aunt grandma grandpa)
     #(
-	    (tell me more about your * , i want to know all about your *)
+	    (tell me more about your * i want to know all about your *)
       (why do you feel that way about your * ?)
       (what kind of relationship do you have with your * ?)
       (what about your * ?)
 	)
   )
   #(
-    #(university scheme lections)
+    #(university scheme lections study)
     #(
       (your education is important)
       (how much time do you spend on your studies ?)
@@ -349,10 +359,10 @@
 ))
 
 
+; список ключевых слов, получаемый из структуры выше
 (define keywords-lst (
   vector-foldl (lambda (index result t) (vector-append result (vector-ref t 0))) '#() keywords-structure
 ))
 
 
-; (visit-doctor 'ivan)
 (visit-doctor-v2 'suppertime 3)
