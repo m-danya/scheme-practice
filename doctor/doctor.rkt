@@ -359,9 +359,16 @@
 ))
 
 
-; список ключевых слов, получаемый из структуры выше
+; список уникальных ключевых слов, получаемый из структуры выше
 (define keywords-lst (
-  vector-foldl (lambda (index result t) (vector-append result (vector-ref t 0))) '#() keywords-structure
+  vector-foldl 
+    (lambda (index result t) (
+      vector-append result (
+        vector-filter-not (lambda (word) (has-vector-elem? result word)) (vector-ref t 0)
+      ))
+    )
+    '#()
+    keywords-structure
 ))
 
 
