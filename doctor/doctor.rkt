@@ -36,6 +36,7 @@
 ; сохраняет список реплик пользователя
 (define (doctor-driver-loop-v2 name) (
     let loop ((name name) (history-vctr #())) (
+      begin
       (newline)
       (print '**) ; доктор ждёт ввода реплики пациента, приглашением к которому является **
       (let ((user-response (read)))
