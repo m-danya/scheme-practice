@@ -79,7 +79,7 @@
         ((equal? user-response '(goodbye)) ; реплика '(goodbye) служит для выхода из цикла
               (printf "Goodbye, ~a!\n" name)
               (println '(see you next week)))
-              (else (print (reply user-response history-vctr)) ; иначе Доктор генерирует ответ, печатает его и продолжает цикл
+              (else (print (reply-v2 answer-types user-response history-vctr)) ; иначе Доктор генерирует ответ, печатает его и продолжает цикл
                     (loop name (vector-append history-vctr (vector user-response)))
               )
         )
@@ -88,7 +88,9 @@
 ))
 
 
-; генерация ответной реплики по user-response -- реплике от пользователя 
+
+; генерация ответной реплики по user-response -- реплике от пользователя
+; эта фукнция не используется, см reply-v2
 (define (reply user-response history-vctr)
       (case (random 
               (if (can-use-keyword-answer user-response) -1 0)
@@ -103,6 +105,126 @@
           ((2) (history-answer history-vctr)) ; 3й способ
       )
 )
+
+
+; генерация ответной реплики по реплике от пользователя и вектора прошлых реплик
+; использует структуру answer-types с информацией о возможных ответных репликах
+(define (reply-v2 answer-types user-response history-vctr) (
+  let ((applicable-answers (
+    filter (lambda (x) ((car x) user-response history-vctr)) answer-types
+  ))) (
+    (caddr (pick-random-list-with-weight applicable-answers)) ; function
+      user-response
+      history-vctr
+  )
+))
+
+
+; структура, описывающая стратегии ответа
+(define answer-types (
+  list 
+    ; каждый элемент — это список, описывающий конкретную стратегию:
+    ; предикат применимости, вес и функция, возвращающая ответ. 
+    ; в качестве аргументов для предикатов и функций передаётся
+    ; user-response, history-vctr и, возможно, что-то ещё (поэтому используется lambda vals)
+  (
+    ; hedge answer
+    list
+      (lambda vals #t)
+      1
+      (lambda vals (
+        let (
+          (user-response (car vals))
+          (history-vctr (cadr vals))
+        ) 
+        (hedge-answer)
+      ))
+  )
+
+  (
+    ; qualified answer
+    list
+      (lambda vals #t)
+      3
+      (lambda vals (
+        let (
+          (user-response (car vals))
+          (history-vctr (cadr vals))
+        ) 
+        (qualifier-answer user-response)
+      ))
+  )
+
+  (
+    ; history answer
+    list
+      (lambda vals (
+        let (
+          (user-response (car vals))
+          (history-vctr (cadr vals))
+        ) (
+          not (equal? history-vctr #())
+        )
+      ))
+      5
+      (lambda vals (
+        let (
+          (user-response (car vals))
+          (history-vctr (cadr vals))
+        ) 
+        (history-answer history-vctr)
+      ))
+  )
+
+  (
+    ; keyword answer
+    list
+      (lambda vals (
+        let (
+          (user-response (car vals))
+          (history-vctr (cadr vals))
+        ) (
+          can-use-keyword-answer user-response
+        )
+      ))
+      20
+      (lambda vals (
+        let (
+          (user-response (car vals))
+          (history-vctr (cadr vals))
+        ) 
+        (keyword-answer user-response)
+      ))
+  )
+))
+
+
+; выбор случайного элемента из списка списков, где вес каждого списка есть его второй элемент
+(define (pick-random-list-with-weight lsts) (
+  let* (
+    (weights-sum (
+    foldl 
+      (lambda (lst sum-result) (+ sum-result (cadr lst)))
+      0
+      lsts
+    ))
+    (random-number (random 1 (+ weights-sum 1)))
+  ) (
+      call/cc (lambda (cc-exit) (
+        foldl 
+          (lambda (lst sum-so-far) ( ; lst это список, описывающий стратегию ответа
+            let ((new-sum (+ sum-so-far (cadr lst)))) (
+              if (>= new-sum random-number)
+                (cc-exit lst)
+                new-sum
+            )
+          ))
+          0
+          lsts
+      ))
+      
+  )
+))
 
 
 (define (can-use-keyword-answer user-response) (
@@ -370,6 +492,8 @@
     '#()
     keywords-structure
 ))
+
+
 
 
 (visit-doctor-v2 'suppertime 3)
